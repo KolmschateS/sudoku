@@ -2,13 +2,18 @@
 
 import { useState } from 'react';
 import SudokuBoard from './components/SudokuBoard';
+import WelcomeScreen from './components/WelcomeScreen';
+import GameHeader from './components/GameHeader';
 import { getInitialPuzzle, isBoardComplete } from './utils/sudoku';
 import { Board, Position } from './types/sudoku';
+import { GameRoom } from './types/room';
 
 export default function Home() {
   const [board, setBoard] = useState<Board>(getInitialPuzzle());
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [isComplete, setIsComplete] = useState(false);
+  const [currentRoom, setCurrentRoom] = useState<GameRoom | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleCellSelect = (position: Position) => {
     // Highlight related cells
@@ -50,38 +55,71 @@ export default function Home() {
     }
   };
 
+  const handleCreateRoom = async (playerName: string, difficulty: 'easy' | 'medium' | 'hard') => {
+    try {
+      // TODO: Implement room creation
+      console.log('Creating room:', { playerName, difficulty });
+      setError(null);
+    } catch (err) {
+      setError('Failed to create room. Please try again.');
+    }
+  };
+
+  const handleJoinRoom = async (playerName: string, roomCode: string) => {
+    try {
+      // TODO: Implement room joining
+      console.log('Joining room:', { playerName, roomCode });
+      setError(null);
+    } catch (err) {
+      setError('Failed to join room. Please try again.');
+    }
+  };
+
+  const handleLeaveRoom = () => {
+    setCurrentRoom(null);
+    setBoard(getInitialPuzzle());
+    setStartTime(null);
+    setIsComplete(false);
+  };
+
   return (
-    <div className="min-h-screen p-8 bg-white dark:bg-gray-900">
-      <main className="flex flex-col items-center gap-8">
+    <div className="min-h-screen p-8 bg-gray-100 dark:bg-gray-900">
+      <main className="flex flex-col items-center gap-8 max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Multiplayer Sudoku</h1>
         
-        <div className="flex flex-col items-center gap-4">
-          <SudokuBoard
-            initialBoard={board}
-            onCellSelect={handleCellSelect}
-            onCellChange={handleCellChange}
-          />
-          
-          <div className="flex gap-4">
-            <button
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 
-                dark:bg-blue-600 dark:hover:bg-blue-700 transition-colors duration-150"
-              onClick={() => {
-                setBoard(getInitialPuzzle());
-                setStartTime(null);
-                setIsComplete(false);
-              }}
-            >
-              New Game
-            </button>
+        {error && (
+          <div className="w-full p-4 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-100 rounded-lg">
+            {error}
           </div>
+        )}
 
-          {isComplete && (
-            <div className="text-green-600 dark:text-green-400 font-bold text-xl">
-              Congratulations! You&apos;ve completed the puzzle!
+        {!currentRoom ? (
+          <WelcomeScreen
+            onCreateRoom={handleCreateRoom}
+            onJoinRoom={handleJoinRoom}
+          />
+        ) : (
+          <div className="w-full space-y-4">
+            <GameHeader
+              room={currentRoom}
+              onLeaveRoom={handleLeaveRoom}
+            />
+            
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4">
+              <SudokuBoard
+                initialBoard={board}
+                onCellSelect={handleCellSelect}
+                onCellChange={handleCellChange}
+              />
             </div>
-          )}
-        </div>
+
+            {isComplete && (
+              <div className="text-center p-4 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-100 rounded-lg">
+                Congratulations! You&apos;ve completed the puzzle!
+              </div>
+            )}
+          </div>
+        )}
       </main>
     </div>
   );
