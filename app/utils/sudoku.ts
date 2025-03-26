@@ -74,4 +74,104 @@ export function getInitialPuzzle(): Board {
       notes: [],
     }))
   );
+}
+
+type Difficulty = 'easy' | 'medium' | 'hard';
+
+interface SudokuResult {
+  board: number[][];
+  solution: number[][];
+}
+
+function generateEmptyBoard(): number[][] {
+  return Array(9).fill(null).map(() => Array(9).fill(0));
+}
+
+function isValid(board: number[][], row: number, col: number, num: number): boolean {
+  // Check row
+  for (let x = 0; x < 9; x++) {
+    if (board[row][x] === num) return false;
+  }
+
+  // Check column
+  for (let x = 0; x < 9; x++) {
+    if (board[x][col] === num) return false;
+  }
+
+  // Check 3x3 box
+  const startRow = Math.floor(row / 3) * 3;
+  const startCol = Math.floor(col / 3) * 3;
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) {
+      if (board[startRow + i][startCol + j] === num) return false;
+    }
+  }
+
+  return true;
+}
+
+function solveSudoku(board: number[][]): boolean {
+  for (let row = 0; row < 9; row++) {
+    for (let col = 0; col < 9; col++) {
+      if (board[row][col] === 0) {
+        for (let num = 1; num <= 9; num++) {
+          if (isValid(board, row, col, num)) {
+            board[row][col] = num;
+            if (solveSudoku(board)) return true;
+            board[row][col] = 0;
+          }
+        }
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+function removeNumbers(board: number[][], difficulty: Difficulty): number[][] {
+  const cellsToRemove = {
+    easy: 40,
+    medium: 50,
+    hard: 60,
+  }[difficulty];
+
+  const puzzle = board.map(row => [...row]);
+  let removed = 0;
+
+  while (removed < cellsToRemove) {
+    const row = Math.floor(Math.random() * 9);
+    const col = Math.floor(Math.random() * 9);
+    
+    if (puzzle[row][col] !== 0) {
+      puzzle[row][col] = 0;
+      removed++;
+    }
+  }
+
+  return puzzle;
+}
+
+export function generateSudoku(difficulty: Difficulty): SudokuResult {
+  const board = generateEmptyBoard();
+  
+  // Fill the first row with random numbers
+  const firstRow = Array.from({ length: 9 }, (_, i) => i + 1);
+  for (let i = 0; i < 9; i++) {
+    const randomIndex = Math.floor(Math.random() * firstRow.length);
+    board[0][i] = firstRow.splice(randomIndex, 1)[0];
+  }
+
+  // Solve the rest of the puzzle
+  solveSudoku(board);
+
+  // Create a copy of the solution
+  const solution = board.map(row => [...row]);
+
+  // Remove numbers based on difficulty
+  const puzzle = removeNumbers(board, difficulty);
+
+  return {
+    board: puzzle,
+    solution,
+  };
 } 

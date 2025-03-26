@@ -1,0 +1,34 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Room {
+  id         String   @id @default(cuid())
+  code       String   @unique
+  difficulty String
+  maxPlayers Int      @default(4)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  players    Player[]
+  board      String   // JSON string of the game board
+  solution   String   // JSON string of the solution
+}
+
+model Player {
+  id        String   @id @default(cuid())
+  name      String
+  roomId    String
+  room      Room     @relation(fields: [roomId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([roomId, name])
+}

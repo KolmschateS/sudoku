@@ -4,82 +4,70 @@ import { useState } from 'react';
 import SudokuBoard from './components/SudokuBoard';
 import WelcomeScreen from './components/WelcomeScreen';
 import GameHeader from './components/GameHeader';
-import { getInitialPuzzle, isBoardComplete } from './utils/sudoku';
-import { Board, Position } from './types/sudoku';
 import { GameRoom } from './types/room';
+import { createRoom, joinRoom, leaveRoom } from './actions';
 
 export default function Home() {
-  const [board, setBoard] = useState<Board>(getInitialPuzzle());
-  const [startTime, setStartTime] = useState<Date | null>(null);
-  const [isComplete, setIsComplete] = useState(false);
   const [currentRoom, setCurrentRoom] = useState<GameRoom | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  const handleCellSelect = (position: Position) => {
-    // Highlight related cells
-    const newBoard = board.map(row => row.map(cell => ({ ...cell, isHighlighted: false })));
-    
-    // Highlight row and column
-    for (let i = 0; i < 9; i++) {
-      newBoard[position.row][i].isHighlighted = true;
-      newBoard[i][position.col].isHighlighted = true;
-    }
-    
-    // Highlight 3x3 box
-    const boxRow = Math.floor(position.row / 3) * 3;
-    const boxCol = Math.floor(position.col / 3) * 3;
-    for (let i = 0; i < 3; i++) {
-      for (let j = 0; j < 3; j++) {
-        newBoard[boxRow + i][boxCol + j].isHighlighted = true;
-      }
-    }
-
-    setBoard(newBoard);
-  };
-
-  const handleCellChange = (position: Position, value: number | null) => {
-    if (!startTime) {
-      setStartTime(new Date());
-    }
-
-    const newBoard = board.map(row => [...row]);
-    newBoard[position.row][position.col] = {
-      ...newBoard[position.row][position.col],
-      value,
-    };
-
-    setBoard(newBoard);
-
-    if (isBoardComplete(newBoard)) {
-      setIsComplete(true);
-    }
-  };
+  const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
+  const [gameBoard, setGameBoard] = useState<number[][]>([]);
 
   const handleCreateRoom = async (playerName: string, difficulty: 'easy' | 'medium' | 'hard') => {
     try {
-      // TODO: Implement room creation
-      console.log('Creating room:', { playerName, difficulty });
-      setError(null);
-    } catch (err) {
+      const result = await createRoom(playerName, difficulty);
+      if (result.success && result.room) {
+        setCurrentRoom(result.room);
+        setGameBoard(JSON.parse(result.room.board));
+      } else {
+        setError(result.error || 'Failed to create room');
+      }
+    } catch {
       setError('Failed to create room. Please try again.');
     }
   };
 
   const handleJoinRoom = async (playerName: string, roomCode: string) => {
     try {
-      // TODO: Implement room joining
-      console.log('Joining room:', { playerName, roomCode });
-      setError(null);
-    } catch (err) {
+      const result = await joinRoom(playerName, roomCode);
+      if (result.success && result.room) {
+        setCurrentRoom(result.room);
+        setGameBoard(JSON.parse(result.room.board));
+      } else {
+        setError(result.error || 'Failed to join room');
+      }
+    } catch {
       setError('Failed to join room. Please try again.');
     }
   };
 
-  const handleLeaveRoom = () => {
-    setCurrentRoom(null);
-    setBoard(getInitialPuzzle());
-    setStartTime(null);
-    setIsComplete(false);
+  const handleLeaveRoom = async () => {
+    if (!currentRoom) return;
+
+    try {
+      const result = await leaveRoom(currentRoom.id, currentRoom.players[0].name);
+      if (result.success) {
+        setCurrentRoom(null);
+        setGameBoard([]);
+        setSelectedCell(null);
+      } else {
+        setError(result.error || 'Failed to leave room');
+      }
+    } catch {
+      setError('Failed to leave room. Please try again.');
+    }
+  };
+
+  const handleCellSelect = (row: number, col: number) => {
+    setSelectedCell({ row, col });
+  };
+
+  const handleCellChange = (value: number) => {
+    if (!selectedCell || !currentRoom) return;
+
+    const newBoard = [...gameBoard];
+    newBoard[selectedCell.row][selectedCell.col] = value;
+    setGameBoard(newBoard);
   };
 
   return (
@@ -107,17 +95,12 @@ export default function Home() {
             
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4">
               <SudokuBoard
-                initialBoard={board}
+                board={gameBoard}
+                selectedCell={selectedCell}
                 onCellSelect={handleCellSelect}
                 onCellChange={handleCellChange}
               />
             </div>
-
-            {isComplete && (
-              <div className="text-center p-4 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-100 rounded-lg">
-                Congratulations! You&apos;ve completed the puzzle!
-              </div>
-            )}
           </div>
         )}
       </main>
